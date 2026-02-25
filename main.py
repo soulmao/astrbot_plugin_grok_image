@@ -174,27 +174,6 @@ class GrokImagePlugin(Star):
             logger.error(f"文件转base64失败: {file_path}, 错误: {str(e)}")
             return None
 
-    async def _prepare_image_for_api(self, image_source: str) -> Optional[Dict]:
-        """准备图片数据用于API调用（支持URL和本地文件）"""
-        if self._is_local_file(image_source):
-            base64_data = await self._file_to_base64(image_source)
-            if base64_data:
-                return {
-                    "image": {
-                        "url": base64_data,
-                        "type": "image_url"
-                    }
-                }
-            else:
-                return None
-        else:
-            return {
-                "image": {
-                    "url": image_source,
-                    "type": "image_url"
-                }
-            }
-
     async def _download_and_save_image(self, image_url: str) -> Optional[str]:
         """下载图片并保存到本地目录"""
         try:
@@ -239,6 +218,64 @@ class GrokImagePlugin(Star):
         except Exception as e:
             logger.error(f"图片下载或保存失败: {str(e)}")
             return None
+
+    def _get_image_sources_from_event(self, event: AstrMessageEvent) -> List[str]:
+        """从消息事件中提取图片 URL
+        
+        遍历 message 字段（List[BaseMessageComponent]）获取 Image 组件
+        """
+        image_urls = [
+            comp.url for comp in event.message_obj.message 
+            if isinstance(comp, Image) and comp.url
+        ]
+        
+        if image_urls:
+            logger.info(f"从消息中提取到 {len(image_urls)} 个图片 URL")
+        
+        return image_urls
+
+    async def _prepare_image_for_api(self, event: AstrMessageEvent, image_source: str = "") -> Optional[Dict]:
+        """准备图片数据用于API调用（支持URL和本地文件）
+        
+        优先从用户消息中获取图片 URL，如果没有则使用传入的 image_source
+        """
+        # 优先从消息中获取图片 URL
+        message_image_urls = self._get_image_sources_from_event(event)
+        if message_image_urls:
+            # 使用消息中的第一个图片 URL
+            url = message_image_urls[0]
+            logger.info(f"使用消息中的图片 URL: {url[:100]}...")
+            return {
+                "image": {
+                    "url": url,
+                    "type": "image_url"
+                }
+            }
+        
+        # 如果消息中没有图片，使用传入的 image_source
+        if not image_source:
+            return None
+        
+        if self._is_local_file(image_source):
+            # 本地文件转 base64
+            base64_data = await self._file_to_base64(image_source)
+            if base64_data:
+                return {
+                    "image": {
+                        "url": base64_data,
+                        "type": "image_url"
+                    }
+                }
+            else:
+                return None
+        else:
+            # 外部 URL
+            return {
+                "image": {
+                    "url": image_source,
+                    "type": "image_url"
+                }
+            }
 
     async def _call_grok_api(self, endpoint: str, payload: dict) -> dict:
         """调用 Grok API（带重试和代理支持）"""
@@ -310,20 +347,6 @@ class GrokImagePlugin(Star):
         
         raise Exception(f"API 调用失败，已重试 {self.max_retries} 次: {last_error}")
 
-    def _get_image_sources_from_event(self, event: AstrMessageEvent) -> List[str]:
-        """从消息事件中提取图片 URL
-        
-        遍历 message 字段（List[BaseMessageComponent]）获取 Image 组件
-        """
-        image_urls = [
-            comp.url for comp in event.message_obj.message 
-            if isinstance(comp, Image) and comp.url
-        ]
-        
-        if image_urls:
-            logger.info(f"从消息中提取到 {len(image_urls)} 个图片 URL")
-        
-        return image_urls
 
     def _validate_aspect_ratio(self, aspect_ratio: str) -> str:
         """验证并返回有效的宽高比"""
@@ -412,27 +435,20 @@ class GrokImagePlugin(Star):
         image_url = kwargs.get("image_url", "")
         image_urls = kwargs.get("image_urls", None)
         
-        # 优先使用 image_urls，其次使用 image_url
-        image_source = ""
+        # 优先使用 image_urls，其次使用 image_url 作为备选
+        fallback_source = ""
         if image_urls and len(image_urls) > 0:
-            image_source = image_urls[0]
+            fallback_source = image_urls[0]
         elif image_url:
-            image_source = image_url
-        
-        if not image_source or not image_source.strip():
-            image_sources = self._get_image_sources_from_event(event)
-            if image_sources:
-                image_source = image_sources[0]
-                logger.info(f"从消息中自动提取图片源")
-            else:
-                return "错误：原图不能为空，且未在消息中检测到图片"
+            fallback_source = image_url
         
         if not prompt or not prompt.strip():
             return "错误：编辑提示词不能为空"
         
-        image_data = await self._prepare_image_for_api(image_source.strip())
+        # 使用 _prepare_image_for_api 获取图片数据（优先从消息中获取）
+        image_data = await self._prepare_image_for_api(event, fallback_source)
         if not image_data:
-            return f"错误：无法处理图片源: {image_source}"
+            return "错误：无法获取图片，请发送图片或提供图片 URL/路径"
         
         payload = {
             "model": GROK_IMAGE_MODEL,
@@ -533,27 +549,27 @@ class GrokImagePlugin(Star):
         message = event.message_str.strip()
         parts = message.split(maxsplit=2)
         
-        image_sources = self._get_image_sources_from_event(event)
-        
-        image_source = None
+        # 解析提示词和备选图片源
         prompt = None
+        fallback_source = ""
         
         if len(parts) >= 3:
-            image_source = parts[1]
+            # /grok_edit <图片> <提示词>
+            fallback_source = parts[1]
             prompt = parts[2]
-        elif image_sources and len(parts) >= 2:
-            image_source = image_sources[0]
-            prompt = parts[1] if len(parts) > 1 else "美化"
+        elif len(parts) >= 2:
+            # /grok_edit <提示词> （图片在消息中）
+            prompt = parts[1]
         else:
-            yield event.plain_result("❌ 用法: /grok_edit <图片> <提示词>")
+            yield event.plain_result("❌ 用法: /grok_edit <图片> <提示词> 或 /grok_edit <提示词>（需附带图片）")
             return
         
-        is_local = self._is_local_file(image_source)
         yield event.plain_result(f"🎨 正在编辑...（预计30-60秒）")
         
-        image_data = await self._prepare_image_for_api(image_source)
+        # 使用 _prepare_image_for_api 获取图片数据（优先从消息中获取）
+        image_data = await self._prepare_image_for_api(event, fallback_source)
         if not image_data:
-            yield event.plain_result(f"❌ 无法处理图片源")
+            yield event.plain_result(f"❌ 无法获取图片，请发送图片或提供图片 URL/路径")
             return
         
         payload = {
