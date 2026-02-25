@@ -1,8 +1,5 @@
 # AstrBot Grok 图像生成与编辑插件
 
-[![AstrBot](https://img.shields.io/badge/AstrBot->=v4.5.7-blue)](https://github.com/Soulter/AstrBot)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-
 基于 Grok API (`grok-imagine-image-pro`) 的图像生成与编辑插件，支持 aiocqhttp 平台（OneBot v11 / QQ）。
 
 ## 🌟 功能特性
@@ -12,28 +9,22 @@
 - 🤖 **AI Tool 集成** - 注册 LLM Tool，让 AI 自动调用图像功能
 - 🖼️ **图片消息处理** - 自动提取用户发送的图片 URL 或本地路径
 - 💾 **自动保存图片** - API 返回的图片自动下载并保存到本地目录
-- 📁 **本地文件支持** - 支持将本地图片文件转为 base64 发送给 API
 - 🌐 **HTTP 代理支持** - 支持通过代理连接 Grok API
-- 🔄 **自动重试** - 内置请求重试机制，提高稳定性
-- 🛠️ **可视化配置** - 在 AstrBot WebUI 中轻松配置插件参数
 
 ## 📦 安装方法
 
-### 方法一：手动安装
+### 手动安装
 
 1. 克隆或下载本插件到 AstrBot 插件目录：
    ```bash
    cd AstrBot/data/plugins/
-   git clone https://github.com/AstrBotDevs/astrbot_plugin_grok_image
+   git clone https://github.com/soulmao/astrbot_plugin_grok_image
    ```
 
 2. 重启 AstrBot 或重载插件
 
 3. 在 WebUI 中配置 Grok API Key
 
-### 方法二：通过插件市场（如果可用）
-
-在 AstrBot WebUI 的插件市场中搜索 `astrbot_plugin_grok_image` 并安装。
 
 ## ⚙️ 配置说明
 
@@ -113,10 +104,6 @@
 [发送图片] /grok_edit <提示词>
 ```
 
-**方式三：使用本地文件路径（自动转 base64）**
-```
-/grok_edit <文件路径> <提示词>
-```
 
 **示例：**
 ```
@@ -126,10 +113,6 @@
 # 直接发送图片并附带命令
 [图片] /grok_edit 添加一些花朵装饰
 
-# 使用本地文件路径（支持绝对路径）
-/grok_edit /AstrBot/data/temp/xxxxx.jpg 换成动漫风格
-/grok_edit /home/user/images/photo.png 添加滤镜效果
-```
 
 **返回结果：**
 ```
@@ -188,7 +171,6 @@ API 返回的图片会自动下载并保存到本地目录：
 根据 API 返回的 Content-Type 自动识别格式：
 - `image/jpeg` → `.jpg`
 - `image/png` → `.png`
-- `image/gif` → `.gif`
 - `image/webp` → `.webp`
 - 其他 → `.jpg`（默认）
 
@@ -282,7 +264,7 @@ astrbot_plugin_grok_image/
 
 ## 📝 更新日志
 
-### v1.0.3
+### v1.0.5
 - ✨ 初始版本发布
 - 🎨 支持图像生成和编辑
 - 🤖 集成 LLM Tool 功能
@@ -311,4 +293,5 @@ astrbot_plugin_grok_image/
 - [xAI 开发者文档](https://docs.x.ai/)
 
 - [Grok API 定价](https://console.x.ai/)
+
 
