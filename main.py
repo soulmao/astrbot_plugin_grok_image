@@ -369,12 +369,23 @@ class GrokImagePlugin(Star):
             return f"生成图像失败: {str(e)}"
 
     @filter.llm_tool(name="grok_edit_image")
-    async def tool_edit_image(self, event: AstrMessageEvent, image_url: str, prompt: str) -> str:
-        '''使用 Grok API 根据原图和提示词编辑/修改图像'''
+    async def tool_edit_image(self, event: AstrMessageEvent, prompt: str, image_url: str = "", image_urls: list = None) -> str:
+        '''使用 Grok API 根据原图和提示词编辑/修改图像
+        
+        Args:
+            prompt(string): 编辑提示词，描述你想要如何修改图像
+            image_url(string): 原图 URL 地址或本地文件路径（单张图片）
+            image_urls(array[string]): 原图 URL 列表（支持多张图片，取第一张）
+        '''
         if not self.api_key:
             return "错误：未配置 Grok API Key"
         
-        image_source = image_url
+        # 优先使用 image_urls，其次使用 image_url
+        image_source = ""
+        if image_urls and len(image_urls) > 0:
+            image_source = image_urls[0]
+        elif image_url:
+            image_source = image_url
         
         if not image_source or not image_source.strip():
             image_sources = self._get_image_sources_from_event(event)
