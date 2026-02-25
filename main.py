@@ -324,10 +324,20 @@ class GrokImagePlugin(Star):
     # ==================== LLM Tools ====================
 
     @filter.llm_tool(name="grok_generate_image")
-    async def tool_generate_image(self, event: AstrMessageEvent, prompt: str, aspect_ratio: str = "1:1", resolution: str = "1k") -> str:
-        '''使用 Grok API 根据文本提示生成图像'''
+    async def tool_generate_image(self, event: AstrMessageEvent, **kwargs) -> str:
+        '''使用 Grok API 根据文本提示生成图像
+        
+        Args:
+            prompt(string)[Required]: 图像生成提示词
+            aspect_ratio(string): 宽高比，可选值: 1:1, 16:9, 9:16, 4:3, 3:4, 2:1, 1:2, 19.5:9, 9:19.5, 20:9, 9:20, auto。默认: 1:1
+            resolution(string): 分辨率，可选值: 1k, 2k。默认: 1k
+        '''
         if not self.api_key:
             return "错误：未配置 Grok API Key"
+        
+        prompt = kwargs.get("prompt", "")
+        aspect_ratio = kwargs.get("aspect_ratio", self.default_aspect_ratio)
+        resolution = kwargs.get("resolution", self.default_resolution)
         
         if not prompt or not prompt.strip():
             return "错误：提示词不能为空"
@@ -369,16 +379,20 @@ class GrokImagePlugin(Star):
             return f"生成图像失败: {str(e)}"
 
     @filter.llm_tool(name="grok_edit_image")
-    async def tool_edit_image(self, event: AstrMessageEvent, prompt: str, image_url: str = "", image_urls: list = None) -> str:
+    async def tool_edit_image(self, event: AstrMessageEvent, **kwargs) -> str:
         '''使用 Grok API 根据原图和提示词编辑/修改图像
         
         Args:
-            prompt(string): 编辑提示词，描述你想要如何修改图像
+            prompt(string)[Required]: 编辑提示词，描述你想要如何修改图像
             image_url(string): 原图 URL 地址或本地文件路径（单张图片）
             image_urls(array[string]): 原图 URL 列表（支持多张图片，取第一张）
         '''
         if not self.api_key:
             return "错误：未配置 Grok API Key"
+        
+        prompt = kwargs.get("prompt", "")
+        image_url = kwargs.get("image_url", "")
+        image_urls = kwargs.get("image_urls", None)
         
         # 优先使用 image_urls，其次使用 image_url
         image_source = ""
