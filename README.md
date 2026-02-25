@@ -14,7 +14,6 @@
 - 💾 **自动保存图片** - API 返回的图片自动下载并保存到本地目录
 - 📁 **本地文件支持** - 支持将本地图片文件转为 base64 发送给 API
 - 🌐 **HTTP 代理支持** - 支持通过代理连接 Grok API
-- ⚡ **异步处理** - 使用 aiohttp 进行高效的异步网络请求
 - 🔄 **自动重试** - 内置请求重试机制，提高稳定性
 - 🛠️ **可视化配置** - 在 AstrBot WebUI 中轻松配置插件参数
 
@@ -264,7 +263,7 @@ astrbot_plugin_grok_image/
 
 ## 🔧 技术细节
 
-- **模型**: `grok-imagine-image-pro`（Grok Pro 图像生成模型）
+- **模型**: `grok-imagine-image`（Grok图像生成模型）
 - **API 端点**: `https://api.x.ai/v1`
 - **支持平台**: aiocqhttp（OneBot v11 / QQ）
 - **最低 AstrBot 版本**: v4.5.7
@@ -283,7 +282,7 @@ astrbot_plugin_grok_image/
 
 ## 📝 更新日志
 
-### v1.0.0
+### v1.0.3
 - ✨ 初始版本发布
 - 🎨 支持图像生成和编辑
 - 🤖 集成 LLM Tool 功能
@@ -306,4 +305,5 @@ astrbot_plugin_grok_image/
 - [AstrBot 官方文档](https://docs.astrbot.app/)
 - [AstrBot GitHub](https://github.com/Soulter/AstrBot)
 - [xAI 开发者文档](https://docs.x.ai/)
+
 - [Grok API 定价](https://console.x.ai/)
