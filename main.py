@@ -57,14 +57,14 @@ class GrokImagePlugin(Star):
         storage_settings = config.get("storage_settings", {})
         self.filename_prefix = storage_settings.get("filename_prefix", "grok_")
         
-        # 数据目录
+        # 使用 AstrBot 规范的数据目录
         plugin_data_dir = StarTools.get_data_dir()  # 返回 pathlib.Path 对象
         self.save_directory = plugin_data_dir / "grok_image"
         self.save_directory.mkdir(parents=True, exist_ok=True)
         logger.info(f"图片保存目录: {self.save_directory}")
         
-        # 安全目录路径（用于路径沙箱验证）
-        self._safe_data_dir = str(self.save_directory.resolve())
+        # 安全目录路径（用于路径沙箱验证）- 允许访问整个 AstrBot 数据目录
+        self._safe_data_dir = str(plugin_data_dir.resolve())
         
         # 高级设置
         advanced_settings = config.get("advanced_settings", {})
@@ -127,7 +127,7 @@ class GrokImagePlugin(Star):
         try:
             # 获取绝对路径
             abs_path = os.path.abspath(file_path)
-            # 获取安全目录的绝对路径
+            # 获取安全目录的绝对路径（AstrBot 数据目录）
             safe_dir = os.path.abspath(self._safe_data_dir)
             
             # 使用 commonpath 验证路径是否在安全目录内
@@ -311,18 +311,19 @@ class GrokImagePlugin(Star):
         raise Exception(f"API 调用失败，已重试 {self.max_retries} 次: {last_error}")
 
     def _get_image_sources_from_event(self, event: AstrMessageEvent) -> List[str]:
-        """从消息事件中提取图片源（URL或本地路径）"""
-        image_sources = []
-        for comp in event.message_obj.message:
-            if isinstance(comp, Image):
-                url = comp.url if hasattr(comp, 'url') and comp.url else None
-                path = comp.path if hasattr(comp, 'path') and comp.path else None
-                
-                source = url or path
-                if source:
-                    image_sources.append(source)
-                    logger.info(f"从消息中提取到图片源")
-        return image_sources
+        """从消息事件中提取图片 URL
+        
+        遍历 message 字段（List[BaseMessageComponent]）获取 Image 组件
+        """
+        image_urls = [
+            comp.url for comp in event.message_obj.message 
+            if isinstance(comp, Image) and comp.url
+        ]
+        
+        if image_urls:
+            logger.info(f"从消息中提取到 {len(image_urls)} 个图片 URL")
+        
+        return image_urls
 
     def _validate_aspect_ratio(self, aspect_ratio: str) -> str:
         """验证并返回有效的宽高比"""
