@@ -9,13 +9,14 @@ help: |
   或通过 LLM Tool 调用：
   - grok_generate_image: 生成图像
   - grok_edit_image: 编辑图像
-version: v1.0.5
+version: v1.0.7
 author: Soulmao
 repo: https://github.com/soulmao/astrbot_plugin_grok_image
 support_platforms:
   - aiocqhttp
 
 astrbot_version: ">=4.5.7"
+
 
 
 
