@@ -1,0 +1,79 @@
+{
+  "grok_api_key": {
+    "description": "Grok API Key",
+    "type": "string",
+    "hint": "从 https://console.x.ai/ 获取的 API Key，用于调用 Grok 图像生成服务",
+    "obvious_hint": true
+  },
+  "grok_default_aspect_ratio": {
+    "description": "默认图像宽高比",
+    "type": "string",
+    "hint": "生成图像时的默认宽高比",
+    "default": "1:1",
+    "options": ["1:1", "16:9", "9:16", "4:3", "3:4", "2:1", "1:2", "19.5:9", "9:19.5", "20:9", "9:20", "auto"]
+  },
+  "grok_default_resolution": {
+    "description": "默认图像分辨率",
+    "type": "string",
+    "hint": "生成图像时的默认分辨率，1k 或 2k",
+    "default": "1k",
+    "options": ["1k", "2k"]
+  },
+  "network_settings": {
+    "description": "网络设置",
+    "type": "object",
+    "hint": "网络连接相关配置",
+    "items": {
+      "http_proxy": {
+        "description": "HTTP 代理地址",
+        "type": "string",
+        "hint": "格式: http://host:port 或 http://user:pass@host:port，留空则不使用代理",
+        "default": ""
+      },
+      "https_proxy": {
+        "description": "HTTPS 代理地址",
+        "type": "string",
+        "hint": "格式: http://host:port，留空则使用 HTTP 代理设置",
+        "default": ""
+      }
+    }
+  },
+  "storage_settings": {
+    "description": "存储设置",
+    "type": "object",
+    "hint": "图片保存相关配置",
+    "items": {
+      "save_directory": {
+        "description": "图片保存目录",
+        "type": "string",
+        "hint": "API 返回的图片保存路径，默认为 /AstrBot/data/plugin_data/grok_image/",
+        "default": ""
+      },
+      "filename_prefix": {
+        "description": "文件名前缀",
+        "type": "string",
+        "hint": "保存的图片文件名前缀",
+        "default": "grok_"
+      }
+    }
+  },
+  "advanced_settings": {
+    "description": "高级设置",
+    "type": "object",
+    "hint": "Grok API 的高级配置选项",
+    "items": {
+      "request_timeout": {
+        "description": "API 请求超时时间（秒）",
+        "type": "int",
+        "hint": "生成/编辑图像的最大等待时间，建议120-300秒",
+        "default": 180
+      },
+      "max_retries": {
+        "description": "最大重试次数",
+        "type": "int",
+        "hint": "API 调用失败时的最大重试次数",
+        "default": 3
+      }
+    }
+  }
+}
