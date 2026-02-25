@@ -23,7 +23,7 @@ from astrbot.api.message_components import Image
 
 # Grok API 配置
 GROK_API_BASE = "https://api.x.ai/v1"
-GROK_IMAGE_MODEL = "grok-imagine-image-pro"
+GROK_IMAGE_MODEL = "grok-imagine-image"
 
 # 支持的宽高比
 VALID_ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "2:1", "1:2", "19.5:9", "9:19.5", "20:9", "9:20", "auto"]
@@ -595,3 +595,4 @@ class GrokImagePlugin(Star):
             await self._session.close()
             logger.info("GrokImagePlugin: session 已关闭")
         logger.info("GrokImagePlugin: 插件已卸载")
+
