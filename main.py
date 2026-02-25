@@ -237,20 +237,36 @@ class GrokImagePlugin(Star):
     async def _prepare_image_for_api(self, event: AstrMessageEvent, image_source: str = "") -> Optional[Dict]:
         """准备图片数据用于API调用（支持URL和本地文件）
         
-        优先从用户消息中获取图片 URL，如果没有则使用传入的 image_source
+        优先从用户消息中获取图片 URL，如果 URL 无法直接访问则下载转 base64
         """
         # 优先从消息中获取图片 URL
         message_image_urls = self._get_image_sources_from_event(event)
         if message_image_urls:
-            # 使用消息中的第一个图片 URL
             url = message_image_urls[0]
-            logger.info(f"使用消息中的图片 URL: {url[:100]}...")
-            return {
-                "image": {
-                    "url": url,
-                    "type": "image_url"
+            
+            # 检测 QQ 临时链接（Grok 服务器无法访问）
+            if "multimedia.nt.qq.com.cn" in url or "gchat.qpic.cn" in url:
+                logger.info(f"检测到 QQ 临时链接，下载到本地后转 base64")
+                # 下载到安全目录
+                local_path = await self._download_and_save_image(url)
+                if not local_path:
+                    logger.error("下载 QQ 图片失败")
+                    return None
+                
+                # 转为 base64
+                base64_data = await self._file_to_base64(local_path)
+                if base64_data:
+                    return {"image": {"url": base64_data, "type": "image_url"}}
+                return None
+            else:
+                # 其他可直接访问的 URL
+                logger.info(f"使用消息中的图片 URL: {url[:100]}...")
+                return {
+                    "image": {
+                        "url": url,
+                        "type": "image_url"
+                    }
                 }
-            }
         
         # 如果消息中没有图片，使用传入的 image_source
         if not image_source:
@@ -404,7 +420,7 @@ class GrokImagePlugin(Star):
                 if image_url:
                     saved_path = await self._download_and_save_image(image_url)
                     if saved_path:
-                        return f"图像生成成功！文件路径: {saved_path}"
+                        return f"图像生成成功！发送请使用send_message_to_user工具！文件路径: {saved_path}"
                     else:
                         return f"图像生成成功，但保存失败。URL: {image_url}"
                 else:
@@ -467,7 +483,7 @@ class GrokImagePlugin(Star):
                 if new_image_url:
                     saved_path = await self._download_and_save_image(new_image_url)
                     if saved_path:
-                        return f"图像编辑成功！文件路径: {saved_path}"
+                        return f"图像编辑成功！发送请使用send_message_to_user工具！文件路径: {saved_path}"
                     else:
                         return f"图像编辑成功，但保存失败。URL: {new_image_url}"
                 else:
