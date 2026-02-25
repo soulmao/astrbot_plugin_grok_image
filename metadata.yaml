@@ -1,5 +1,5 @@
 name: astrbot_plugin_grok_image
-desc: 基于 Grok API 的图像生成与编辑插件，仅对 aiocqhttp 平台测试
+desc: 基于 Grok API 的图像生成与编辑插件（需API）。支持LLM自主调用与命令手动调用；支持设置HTTP代理；支持默认设置等
 help: |
   使用 Grok API 生成和编辑图像。
   可用命令：
@@ -16,4 +16,5 @@ support_platforms:
   - aiocqhttp
 
 astrbot_version: ">=4.5.7"
+
 
