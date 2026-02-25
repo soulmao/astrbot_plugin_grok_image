@@ -41,14 +41,8 @@
   "storage_settings": {
     "description": "存储设置",
     "type": "object",
-    "hint": "图片保存相关配置",
+    "hint": "图片自动保存到 AstrBot 数据目录下的 grok_image 文件夹，无需手动配置路径",
     "items": {
-      "save_directory": {
-        "description": "图片保存目录",
-        "type": "string",
-        "hint": "API 返回的图片保存路径，默认为 /AstrBot/data/plugin_data/grok_image/",
-        "default": ""
-      },
       "filename_prefix": {
         "description": "文件名前缀",
         "type": "string",
