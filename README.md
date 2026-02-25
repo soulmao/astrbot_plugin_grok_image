@@ -291,6 +291,10 @@ astrbot_plugin_grok_image/
 - 📁 支持本地文件转 base64 发送
 - 🌐 支持 HTTP 代理
 - ⚙️ 支持可视化配置
+### 已知BUG
+- 🥺 下载图片完成后，控制台输出完成消息。LLM需要再使用send_message_to_user工具发送给用户。
+- 😋 图片默认保存地址仿佛有些问题。
+- 🥺 尽量不要使用pro模型或编辑过大文件，会导致任务超时。如有其他异常，请使用/stop命令进行中断。
 
 ## 🤝 贡献
 
@@ -307,3 +311,4 @@ astrbot_plugin_grok_image/
 - [xAI 开发者文档](https://docs.x.ai/)
 
 - [Grok API 定价](https://console.x.ai/)
+
