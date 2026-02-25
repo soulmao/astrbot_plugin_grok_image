@@ -16,7 +16,7 @@ from typing import Optional, List, Dict
 import aiohttp
 from aiohttp import TCPConnector
 from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star
+from astrbot.api.star import Context, Star, StarTools
 from astrbot.api import logger
 from astrbot.api import AstrBotConfig
 from astrbot.api.message_components import Image
@@ -55,17 +55,16 @@ class GrokImagePlugin(Star):
         
         # 存储设置
         storage_settings = config.get("storage_settings", {})
-        self.save_directory = storage_settings.get("save_directory", "")
         self.filename_prefix = storage_settings.get("filename_prefix", "grok_")
         
-        # 如果没有配置保存目录，使用默认路径
-        if not self.save_directory:
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
-            self.save_directory = os.path.join(data_dir, "plugin_data", "grok_image")
-        
-        # 确保保存目录存在
-        os.makedirs(self.save_directory, exist_ok=True)
+        # 数据目录
+        plugin_data_dir = StarTools.get_data_dir()  # 返回 pathlib.Path 对象
+        self.save_directory = plugin_data_dir / "grok_image"
+        self.save_directory.mkdir(parents=True, exist_ok=True)
         logger.info(f"图片保存目录: {self.save_directory}")
+        
+        # 安全目录路径（用于路径沙箱验证）
+        self._safe_data_dir = str(self.save_directory.resolve())
         
         # 高级设置
         advanced_settings = config.get("advanced_settings", {})
@@ -107,7 +106,6 @@ class GrokImagePlugin(Star):
             )
             
             trust_env = False
-            proxy = self._get_proxy()
             
             self._session = aiohttp.ClientSession(
                 connector=connector,
@@ -118,17 +116,38 @@ class GrokImagePlugin(Star):
                 trust_env=trust_env
             )
             
-            self._session._grok_proxy = proxy
-            
         return self._session
 
     def _is_local_file(self, path: str) -> bool:
         """检查是否是本地文件路径"""
         return path.startswith('/') or path.startswith('\\') or (len(path) > 1 and path[1] == ':')
 
-    async def _file_to_base64(self, file_path: str) -> Optional[str]:
-        """将本地文件转换为 base64 字符串"""
+    def _is_path_safe(self, file_path: str) -> bool:
+        """验证文件路径是否在安全目录内（路径沙箱验证）"""
         try:
+            # 获取绝对路径
+            abs_path = os.path.abspath(file_path)
+            # 获取安全目录的绝对路径
+            safe_dir = os.path.abspath(self._safe_data_dir)
+            
+            # 使用 commonpath 验证路径是否在安全目录内
+            common = os.path.commonpath([abs_path, safe_dir])
+            if common != safe_dir:
+                logger.error(f"路径安全检查失败: {abs_path} 不在安全目录 {safe_dir} 内")
+                return False
+            return True
+        except Exception as e:
+            logger.error(f"路径验证失败: {str(e)}")
+            return False
+
+    async def _file_to_base64(self, file_path: str) -> Optional[str]:
+        """将本地文件转换为 base64 字符串（带路径沙箱验证）"""
+        try:
+            # 路径沙箱验证
+            if not self._is_path_safe(file_path):
+                logger.error(f"文件路径不在允许的安全目录内: {file_path}")
+                return None
+            
             if not os.path.exists(file_path):
                 logger.error(f"文件不存在: {file_path}")
                 return None
@@ -180,7 +199,7 @@ class GrokImagePlugin(Star):
         """下载图片并保存到本地目录"""
         try:
             session = await self._get_session()
-            proxy = getattr(session, '_grok_proxy', None)
+            proxy = self._get_proxy()
             
             logger.info(f"正在下载图片...")
             
@@ -229,12 +248,12 @@ class GrokImagePlugin(Star):
         }
         
         url = f"{GROK_API_BASE}{endpoint}"
+        proxy = self._get_proxy()
         
         last_error = None
         for attempt in range(self.max_retries):
             try:
                 session = await self._get_session()
-                proxy = getattr(session, '_grok_proxy', None)
                 
                 logger.info(f"Grok API 请求: {endpoint} (尝试 {attempt + 1}/{self.max_retries})")
                 
@@ -254,8 +273,8 @@ class GrokImagePlugin(Star):
                     logger.info(f"Grok API 请求成功")
                     return result
                     
-            except asyncio.TimeoutError as e:
-                last_error = f"请求超时"
+            except asyncio.TimeoutError:
+                last_error = "请求超时"
                 logger.warning(f"Grok API 请求超时 (尝试 {attempt + 1}/{self.max_retries})")
                 if attempt < self.max_retries - 1:
                     wait_time = 2 ** attempt
@@ -273,9 +292,7 @@ class GrokImagePlugin(Star):
                 if attempt < self.max_retries - 1:
                     wait_time = 2 ** attempt
                     await asyncio.sleep(wait_time)
-                    if self._session and not self._session.closed:
-                        await self._session.close()
-                    self._session = None
+                    # 不移除 session，让 aiohttp 内部机制处理死连接
                     continue
                     
             except aiohttp.ClientError as e:
@@ -595,4 +612,3 @@ class GrokImagePlugin(Star):
             await self._session.close()
             logger.info("GrokImagePlugin: session 已关闭")
         logger.info("GrokImagePlugin: 插件已卸载")
-
