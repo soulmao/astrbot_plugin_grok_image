@@ -404,7 +404,7 @@ class GrokImagePlugin(Star):
         aspect_ratio = self._validate_aspect_ratio(aspect_ratio)
         resolution = self._validate_resolution(resolution)
         
-        yield event.plain_result("🎨 正在生成图像，请稍候...（预计30-60秒）")
+        yield event.plain_result("🎨 生成中，请稍候...")
         
         payload = {
             "model": GROK_IMAGE_MODEL,
@@ -474,7 +474,7 @@ class GrokImagePlugin(Star):
             yield event.plain_result("错误：无法获取图片，请发送图片或提供图片 URL/路径")
             return
         
-        yield event.plain_result("🎨 正在编辑图像，请稍候...（预计30-60秒）")
+        yield event.plain_result("🎨 编辑中，请稍候...")
         
         payload = {
             "model": GROK_IMAGE_MODEL,
@@ -561,7 +561,7 @@ class GrokImagePlugin(Star):
         aspect_ratio = self._validate_aspect_ratio(aspect_ratio)
         resolution = self._validate_resolution(resolution)
         
-        yield event.plain_result(f"🎨 正在生成图像，请稍候...（预计30-60秒）")
+        yield event.plain_result(f"🎨 生成中，请稍候...")
         
         payload = {
             "model": GROK_IMAGE_MODEL,
@@ -620,7 +620,7 @@ class GrokImagePlugin(Star):
             yield event.plain_result("❌ 用法: /grok_edit <图片> <提示词> 或 /grok_edit <提示词>（需附带图片）")
             return
         
-        yield event.plain_result(f"🎨 正在编辑...（预计30-60秒）")
+        yield event.plain_result(f"🎨 正在编辑...")
         
         # 使用 _prepare_image_for_api 获取图片数据（优先从消息中获取）
         image_data = await self._prepare_image_for_api(event, fallback_source)
@@ -685,3 +685,4 @@ class GrokImagePlugin(Star):
             await self._session.close()
             logger.info("GrokImagePlugin: session 已关闭")
         logger.info("GrokImagePlugin: 插件已卸载")
+
