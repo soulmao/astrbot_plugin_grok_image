@@ -1,6 +1,6 @@
 # AstrBot Grok 图像生成与编辑插件
 
-基于 Grok API (`grok-imagine-image-pro`) 的图像生成与编辑插件，支持 aiocqhttp 平台（OneBot v11 / QQ）。
+基于 Grok API (`grok-imagine-image`) 的图像生成与编辑插件，支持 aiocqhttp 平台（OneBot v11 / QQ）。
 
 ## 🌟 功能特性
 
@@ -264,7 +264,7 @@ astrbot_plugin_grok_image/
 
 ## 📝 更新日志
 
-### v1.0.5
+### v1.0.8
 - ✨ 初始版本发布
 - 🎨 支持图像生成和编辑
 - 🤖 集成 LLM Tool 功能
@@ -293,5 +293,6 @@ astrbot_plugin_grok_image/
 - [xAI 开发者文档](https://docs.x.ai/)
 
 - [Grok API 定价](https://console.x.ai/)
+
 
 
