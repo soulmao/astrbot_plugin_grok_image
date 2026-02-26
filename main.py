@@ -6,8 +6,8 @@
 
 import asyncio
 import base64
-import json
 import os
+import re
 import socket
 import uuid
 from datetime import datetime
@@ -381,7 +381,7 @@ class GrokImagePlugin(Star):
     # ==================== LLM Tools ====================
 
     @filter.llm_tool(name="grok_generate_image")
-    async def tool_generate_image(self, event: AstrMessageEvent, **kwargs) -> str:
+    async def tool_generate_image(self, event: AstrMessageEvent, **kwargs):
         '''使用 Grok API 根据文本提示生成图像
         
         Args:
@@ -390,17 +390,21 @@ class GrokImagePlugin(Star):
             resolution(string): 分辨率，可选值: 1k, 2k。默认: 1k
         '''
         if not self.api_key:
-            return "错误：未配置 Grok API Key"
+            yield event.plain_result("错误：未配置 Grok API Key")
+            return
         
         prompt = kwargs.get("prompt", "")
         aspect_ratio = kwargs.get("aspect_ratio", self.default_aspect_ratio)
         resolution = kwargs.get("resolution", self.default_resolution)
         
         if not prompt or not prompt.strip():
-            return "错误：提示词不能为空"
+            yield event.plain_result("错误：提示词不能为空")
+            return
         
         aspect_ratio = self._validate_aspect_ratio(aspect_ratio)
         resolution = self._validate_resolution(resolution)
+        
+        yield event.plain_result("🎨 正在生成图像，请稍候...（预计30-60秒）")
         
         payload = {
             "model": GROK_IMAGE_MODEL,
@@ -420,23 +424,24 @@ class GrokImagePlugin(Star):
                 if image_url:
                     saved_path = await self._download_and_save_image(image_url)
                     if saved_path:
-                        return f"图像生成成功！发送请使用send_message_to_user工具！文件路径: {saved_path}"
+                        yield event.plain_result("✅ 图像生成成功！")
+                        yield event.image_result(saved_path)
                     else:
-                        return f"图像生成成功，但保存失败。URL: {image_url}"
+                        yield event.plain_result(f"⚠️ 保存失败\n🌐 {image_url}")
                 else:
-                    return "错误：API 返回数据中没有图像 URL"
+                    yield event.plain_result("错误：API 返回数据中没有图像 URL")
             else:
-                return f"错误：API 返回数据格式异常"
+                yield event.plain_result("错误：API 返回数据格式异常")
                 
         except asyncio.TimeoutError:
             logger.error("生成图像超时")
-            return f"错误：生成图像超时（>{self.request_timeout}秒）。Grok API 处理时间较长，请使用命令方式重试"
+            yield event.plain_result(f"错误：生成图像超时（>{self.request_timeout}秒）。Grok API 处理时间较长，请使用命令方式重试")
         except Exception as e:
             logger.error(f"生成图像失败: {str(e)}")
-            return f"生成图像失败: {str(e)}"
+            yield event.plain_result(f"生成图像失败: {str(e)}")
 
     @filter.llm_tool(name="grok_edit_image")
-    async def tool_edit_image(self, event: AstrMessageEvent, **kwargs) -> str:
+    async def tool_edit_image(self, event: AstrMessageEvent, **kwargs):
         '''使用 Grok API 根据原图和提示词编辑/修改图像
         
         Args:
@@ -445,7 +450,8 @@ class GrokImagePlugin(Star):
             image_urls(array[string]): 原图 URL 列表（支持多张图片，取第一张）
         '''
         if not self.api_key:
-            return "错误：未配置 Grok API Key"
+            yield event.plain_result("错误：未配置 Grok API Key")
+            return
         
         prompt = kwargs.get("prompt", "")
         image_url = kwargs.get("image_url", "")
@@ -459,12 +465,16 @@ class GrokImagePlugin(Star):
             fallback_source = image_url
         
         if not prompt or not prompt.strip():
-            return "错误：编辑提示词不能为空"
+            yield event.plain_result("错误：编辑提示词不能为空")
+            return
         
         # 使用 _prepare_image_for_api 获取图片数据（优先从消息中获取）
         image_data = await self._prepare_image_for_api(event, fallback_source)
         if not image_data:
-            return "错误：无法获取图片，请发送图片或提供图片 URL/路径"
+            yield event.plain_result("错误：无法获取图片，请发送图片或提供图片 URL/路径")
+            return
+        
+        yield event.plain_result("🎨 正在编辑图像，请稍候...（预计30-60秒）")
         
         payload = {
             "model": GROK_IMAGE_MODEL,
@@ -483,22 +493,57 @@ class GrokImagePlugin(Star):
                 if new_image_url:
                     saved_path = await self._download_and_save_image(new_image_url)
                     if saved_path:
-                        return f"图像编辑成功！发送请使用send_message_to_user工具！文件路径: {saved_path}"
+                        yield event.plain_result("✅ 图像编辑成功！")
+                        yield event.image_result(saved_path)
                     else:
-                        return f"图像编辑成功，但保存失败。URL: {new_image_url}"
+                        yield event.plain_result(f"⚠️ 保存失败\n🌐 {new_image_url}")
                 else:
-                    return "错误：API 返回数据中没有图像 URL"
+                    yield event.plain_result("错误：API 返回数据中没有图像 URL")
             else:
-                return f"错误：API 返回数据格式异常"
+                yield event.plain_result("错误：API 返回数据格式异常")
                 
         except asyncio.TimeoutError:
             logger.error("编辑图像超时")
-            return f"错误：编辑图像超时（>{self.request_timeout}秒）。Grok API 处理时间较长，请使用命令方式重试"
+            yield event.plain_result(f"错误：编辑图像超时（>{self.request_timeout}秒）。Grok API 处理时间较长，请使用命令方式重试")
         except Exception as e:
             logger.error(f"编辑图像失败: {str(e)}")
-            return f"编辑图像失败: {str(e)}"
+            yield event.plain_result(f"编辑图像失败: {str(e)}")
 
     # ==================== Commands ====================
+
+    def _parse_gen_args(self, message: str) -> tuple:
+        """解析生成图像命令参数，从末尾反向匹配宽高比和分辨率"""
+        # 移除命令前缀
+        content = message.strip()
+        if content.startswith('/grok_gen'):
+            content = content[9:].strip()
+        elif content.startswith('/grok_gen@'):
+            # 处理 @botname 的情况
+            content = content.split(maxsplit=1)[1] if len(content.split(maxsplit=1)) > 1 else ""
+        
+        if not content:
+            return None, None, None
+        
+        # 从末尾匹配分辨率 (1k 或 2k)
+        resolution = self.default_resolution
+        res_match = re.search(r'\s+(1k|2k)$', content, re.IGNORECASE)
+        if res_match:
+            resolution = res_match.group(1).lower()
+            content = content[:res_match.start()].strip()
+        
+        # 从末尾匹配宽高比
+        aspect_ratio = self.default_aspect_ratio
+        # 支持 19.5:9 这样的特殊比例，需要转义点号
+        ratio_pattern = r'\s+((?:\d+(?:\.\d+)?:\d+(?:\.\d+)?)|auto)$'
+        ratio_match = re.search(ratio_pattern, content, re.IGNORECASE)
+        if ratio_match:
+            matched_ratio = ratio_match.group(1)
+            if matched_ratio.lower() == 'auto' or matched_ratio in VALID_ASPECT_RATIOS:
+                aspect_ratio = matched_ratio
+                content = content[:ratio_match.start()].strip()
+        
+        prompt = content.strip()
+        return prompt, aspect_ratio, resolution
 
     @filter.command("grok_gen")
     async def cmd_generate_image(self, event: AstrMessageEvent):
@@ -507,16 +552,11 @@ class GrokImagePlugin(Star):
             yield event.plain_result("❌ 错误：未配置 Grok API Key")
             return
         
-        message = event.message_str.strip()
-        parts = message.split(maxsplit=3)
+        prompt, aspect_ratio, resolution = self._parse_gen_args(event.message_str)
         
-        if len(parts) < 2:
+        if not prompt:
             yield event.plain_result("❌ 用法: /grok_gen <提示词> [宽高比] [分辨率]")
             return
-        
-        prompt = parts[1]
-        aspect_ratio = parts[2] if len(parts) > 2 else self.default_aspect_ratio
-        resolution = parts[3] if len(parts) > 3 else self.default_resolution
         
         aspect_ratio = self._validate_aspect_ratio(aspect_ratio)
         resolution = self._validate_resolution(resolution)
